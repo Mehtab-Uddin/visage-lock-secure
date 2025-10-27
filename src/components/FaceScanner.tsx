@@ -69,6 +69,11 @@ export function FaceScanner({ onFaceDetected, onError, isProcessing }: FaceScann
     scanIntervalRef.current = setInterval(async () => {
       if (!videoRef.current || !canvasRef.current || isProcessing) return;
 
+      // Check if video is ready
+      if (videoRef.current.readyState < 2 || videoRef.current.videoWidth === 0) {
+        return;
+      }
+
       try {
         const detection = await detectFace(videoRef.current);
         

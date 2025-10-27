@@ -74,44 +74,41 @@ export default function Login() {
     setIsProcessing(true);
 
     try {
-      const isMatch = compareFaces(
-        descriptor,
-        storedDescriptor,
-        0.6
-      );
+      // Convert descriptor to array for API call
+      const descriptorArray = Array.from(descriptor);
 
-      if (!isMatch) {
+      // Call the face authentication edge function
+      const { data, error } = await supabase.functions.invoke('face-auth', {
+        body: { email, faceDescriptor: descriptorArray }
+      });
+
+      if (error || data.error) {
         toast({
           title: 'Face Not Recognized',
-          description: 'The face does not match our records.',
+          description: data?.error || 'The face does not match our records.',
           variant: 'destructive',
         });
         setIsProcessing(false);
         return;
       }
 
-      // Get user data to sign in
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('email', email)
-        .single();
+      // Use the magic link token to sign in
+      const { error: authError } = await supabase.auth.verifyOtp({
+        email,
+        token: data.token,
+        type: 'magiclink'
+      });
 
-      if (!profileData) {
-        throw new Error('Profile not found');
+      if (authError) {
+        throw authError;
       }
 
-      // Since we can't directly sign in with user_id, we'll use a workaround
-      // In a real app, you'd create a custom auth endpoint that verifies the face
-      // and generates a session token. For now, we'll show success and guide to password login
-      
       toast({
         title: 'Face Recognized!',
         description: 'Identity verified successfully. Logging you in...',
       });
 
-      // For demo purposes, we'll automatically sign in
-      // In production, you'd implement a secure backend endpoint
+      // Navigate to dashboard after successful authentication
       setTimeout(() => {
         navigate('/dashboard');
       }, 1000);
