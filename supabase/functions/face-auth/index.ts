@@ -24,17 +24,24 @@ serve(async (req) => {
     // Create Supabase client with service role key for admin operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
     );
 
     // Fetch the stored face descriptor
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('user_id, face_descriptor')
+      .select('user_id, face_descriptor, email')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
     if (profileError || !profile) {
+      console.error('Profile fetch error:', profileError);
       return new Response(
         JSON.stringify({ error: 'User not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -46,6 +53,8 @@ serve(async (req) => {
     const distance = euclideanDistance(faceDescriptor, storedDescriptor);
     const threshold = 0.6;
 
+    console.log('Face comparison distance:', distance);
+
     if (distance >= threshold) {
       return new Response(
         JSON.stringify({ error: 'Face not recognized', distance }),
@@ -53,24 +62,27 @@ serve(async (req) => {
       );
     }
 
-    // Face verified - generate a session token
-    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+    // Face verified - generate a magic link for authentication
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: email,
     });
 
-    if (error) {
-      console.error('Auth error:', error);
+    if (linkError) {
+      console.error('Link generation error:', linkError);
       return new Response(
-        JSON.stringify({ error: 'Failed to generate auth token' }),
+        JSON.stringify({ error: 'Failed to generate auth link' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Extract the token from the generated link
+    // The properties.hashed_token can be used with verifyOtp
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        token: data.properties.hashed_token,
+        success: true,
+        token: linkData.properties.hashed_token,
+        email: email,
         distance 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

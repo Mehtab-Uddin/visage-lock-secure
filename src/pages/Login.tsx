@@ -92,14 +92,15 @@ export default function Login() {
         return;
       }
 
-      // Use the magic link token to sign in
+      // Use the hashed token to verify and sign in
       const { error: authError } = await supabase.auth.verifyOtp({
-        email,
+        email: data.email,
         token: data.token,
         type: 'magiclink'
       });
 
       if (authError) {
+        console.error('Auth error:', authError);
         throw authError;
       }
 

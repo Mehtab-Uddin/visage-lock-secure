@@ -19,6 +19,7 @@ export type Database = {
           created_at: string | null
           email: string
           face_descriptor: Json
+          face_token: string | null
           id: string
           updated_at: string | null
           user_id: string
@@ -27,6 +28,7 @@ export type Database = {
           created_at?: string | null
           email: string
           face_descriptor: Json
+          face_token?: string | null
           id?: string
           updated_at?: string | null
           user_id: string
@@ -35,6 +37,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           face_descriptor?: Json
+          face_token?: string | null
           id?: string
           updated_at?: string | null
           user_id?: string
