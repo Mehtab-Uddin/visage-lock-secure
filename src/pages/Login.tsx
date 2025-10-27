@@ -13,7 +13,6 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [storedDescriptor, setStoredDescriptor] = useState<number[] | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -55,12 +54,12 @@ export default function Login() {
         return;
       }
 
-      setStoredDescriptor(data.face_descriptor as number[]);
       setShowScanner(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -69,7 +68,7 @@ export default function Login() {
   };
 
   const handleFaceDetected = async (descriptor: Float32Array) => {
-    if (!storedDescriptor || isProcessing) return;
+    if (isProcessing) return;
 
     setIsProcessing(true);
 
@@ -114,11 +113,12 @@ export default function Login() {
         navigate('/dashboard');
       }, 1000);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       toast({
         title: 'Login Failed',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
